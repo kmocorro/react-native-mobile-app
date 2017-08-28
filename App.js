@@ -1,16 +1,44 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { AppRegistry, Image, TextInput, Alert, Button, ScrollView, FlatList, ActivityIndicator, ListView, ToolbarAndroid } from 'react-native';
+import { AppRegistry, Image, TextInput, Alert, Button, ScrollView, FlatList, ActivityIndicator, ListView, ToolbarAndroid, RefreshControl } from 'react-native';
 import {PagerTabIndicator, IndicatorViewPager, PagerTitleIndicator, PagerDotIndicator} from 'rn-viewpager';
+
 
 
 export default class GreetingsTo extends React.Component {
   constructor(props) {
   super(props);
+
+  var d = new Date(); // get current date
+  d.setHours(d.getHours(),d.getMinutes()-10,0,0);
+
   this.state = {
     text: '',
-    isLoading: true
+    isLoading: true,
+    curTime: d.toLocaleString(),
+    refreshing: false,
     }
+  }
+
+  _onRefresh() {
+    this.setState({refreshing: true});
+    return fetch('http://192.168.1.113:3000/mobile/')
+      .then((response) => response.json())
+      .then((responseJson) => {
+        let ds = new ListView.DataSource({rowHasChanged: (r1, r2) => r1 !== r2});
+        this.setState({
+          isLoading: false,
+          dataSource: ds.cloneWithRows(responseJson.process),
+        }, function() {
+          //do something with new state
+          this.setState({refreshing: false});
+        });
+      })
+
+      .catch((error) => {
+        console.error(error);
+      });
+    
   }
 
   _onPressbutton_doNot() {
@@ -26,13 +54,14 @@ export default class GreetingsTo extends React.Component {
   }
 
   componentDidMount() {
+    // change this url soon
     return fetch('http://192.168.1.113:3000/mobile/')
       .then((response) => response.json())
       .then((responseJson) => {
         let ds = new ListView.DataSource({rowHasChanged: (r1, r2) => r1 !== r2});
         this.setState({
           isLoading: false,
-          dataSource: ds.cloneWithRows(responseJson.name),
+          dataSource: ds.cloneWithRows(responseJson.process),
         }, function() {
           //do something with new state
         });
@@ -41,6 +70,7 @@ export default class GreetingsTo extends React.Component {
       .catch((error) => {
         console.error(error);
       });
+
   }
 
   render() {
@@ -57,10 +87,18 @@ export default class GreetingsTo extends React.Component {
       );
     }
       return (
+        <ScrollView
+          refreshControl={
+                    <RefreshControl
+                      refreshing={this.state.refreshing}
+                      onRefresh={this._onRefresh.bind(this)}
+                    />
+                    }
+          >
         <View style={{flex:1}}>
-
-          <IndicatorViewPager style={{height:200}} indicator={this._renderDotIndicator()}>
-
+        
+          <IndicatorViewPager style={{height:650}} indicator={this._renderDotIndicator()}>
+        
             <View style={styles.container}>
                 <Image 
                   style={styles.backdrop}
@@ -70,14 +108,33 @@ export default class GreetingsTo extends React.Component {
                     </View>
                 </Image>
 
-                <ListView
+                <View style={styles.targetContainer}>
+                  <Text style={styles.targetText}>Target</Text>
+                  <ListView
                   dataSource={this.state.dataSource}
-                  renderRow={ (rowData) => 
-                    <Text> {rowData.firstName}, {rowData.age} </Text>
-                    }/>
+                  renderRow={ (rowData) => {
+                    if(rowData.process_name == "DAMAGE"){
+                      return <Text style={styles.targetValue}> {((Math.round(rowData.t_target* 100)/100).toLocaleString(undefined, {maximumFractionDigits: 0}))} </Text>
+                      } else { return null }
+                    }
+                  }/>
+                  <Text style={styles.targetTime}>{this.state.curTime}</Text>
+                </View>
+
+                <View style={styles.outsContainer}>
+                  <Text style={styles.outsText}>Actual Outs</Text>
+                  <Text style={styles.outsValue}>123,120</Text>
+                  <Text style={styles.outsTime}>{this.state.curTime}</Text>
+                </View>
+
+                <View style={styles.varContainer}>
+                  <Text style={styles.varText}>Variance</Text>
+                  <Text style={styles.varValue}>0</Text>
+                  <Text style={styles.varTime}>{this.state.curTime}</Text>
+                </View>
 
             </View>
-
+            
             <View style={styles.container}>
                 <Image 
                   style={styles.backdrop}
@@ -89,344 +146,25 @@ export default class GreetingsTo extends React.Component {
 
                 <ListView
                   dataSource={this.state.dataSource}
-                  renderRow={ (rowData) => 
-                    <Text> {rowData.firstName}, {rowData.age} </Text>
-                    }/>
+                  renderRow={ (rowData) => {
+                    if(rowData.process_name == "POLY"){
+                      return <Text> {rowData.process_name}, {rowData.t_target} </Text>
+                      } else { return null }
+                    }
+                  }/>
 
             </View>
 
-            <View style={styles.container}>
-                <Image 
-                  style={styles.backdrop}
-                  source={require('./public/pc.jpg')} style={{width: 360, height: 110}}>
-                    <View style={styles.backdropView}>
-                      <Text style={styles.headline}>BSGDEP</Text>
-                    </View>
-                </Image>
-
-                <ListView
-                  dataSource={this.state.dataSource}
-                  renderRow={ (rowData) => 
-                    <Text> {rowData.firstName}, {rowData.age} </Text>
-                    }/>
-
-            </View>
-            
-            <View style={styles.container}>
-                <Image 
-                  style={styles.backdrop}
-                  source={require('./public/pc.jpg')} style={{width: 360, height: 110}}>
-                    <View style={styles.backdropView}>
-                      <Text style={styles.headline}>NTM</Text>
-                    </View>
-                </Image>
-
-                <ListView
-                  dataSource={this.state.dataSource}
-                  renderRow={ (rowData) => 
-                    <Text> {rowData.firstName}, {rowData.age} </Text>
-                    }/>
-
-            </View>
-
-            <View style={styles.container}>
-                <Image 
-                  style={styles.backdrop}
-                  source={require('./public/pc.jpg')} style={{width: 360, height: 110}}>
-                    <View style={styles.backdropView}>
-                      <Text style={styles.headline}>NOXE</Text>
-                    </View>
-                </Image>
-
-                <ListView
-                  dataSource={this.state.dataSource}
-                  renderRow={ (rowData) => 
-                    <Text> {rowData.firstName}, {rowData.age} </Text>
-                    }/>
-
-            </View>
-
-            <View style={styles.container}>
-                <Image 
-                  style={styles.backdrop}
-                  source={require('./public/pc.jpg')} style={{width: 360, height: 110}}>
-                    <View style={styles.backdropView}>
-                      <Text style={styles.headline}>NDEP</Text>
-                    </View>
-                </Image>
-
-                <ListView
-                  dataSource={this.state.dataSource}
-                  renderRow={ (rowData) => 
-                    <Text> {rowData.firstName}, {rowData.age} </Text>
-                    }/>
-
-            </View>
-
-            <View style={styles.container}>
-                <Image 
-                  style={styles.backdrop}
-                  source={require('./public/pc.jpg')} style={{width: 360, height: 110}}>
-                    <View style={styles.backdropView}>
-                      <Text style={styles.headline}>PTM</Text>
-                    </View>
-                </Image>
-
-                <ListView
-                  dataSource={this.state.dataSource}
-                  renderRow={ (rowData) => 
-                    <Text> {rowData.firstName}, {rowData.age} </Text>
-                    }/>
-
-            </View>
-
-            <View style={styles.container}>
-                <Image 
-                  style={styles.backdrop}
-                  source={require('./public/pc.jpg')} style={{width: 360, height: 110}}>
-                    <View style={styles.backdropView}>
-                      <Text style={styles.headline}>TOXE</Text>
-                    </View>
-                </Image>
-
-                <ListView
-                  dataSource={this.state.dataSource}
-                  renderRow={ (rowData) => 
-                    <Text> {rowData.firstName}, {rowData.age} </Text>
-                    }/>
-
-            </View>
-
-            <View style={styles.container}>
-                <Image 
-                  style={styles.backdrop}
-                  source={require('./public/pc.jpg')} style={{width: 360, height: 110}}>
-                    <View style={styles.backdropView}>
-                      <Text style={styles.headline}>CLEANTEX</Text>
-                    </View>
-                </Image>
-
-                <ListView
-                  dataSource={this.state.dataSource}
-                  renderRow={ (rowData) => 
-                    <Text> {rowData.firstName}, {rowData.age} </Text>
-                    }/>
-
-            </View>
-
-            <View style={styles.container}>
-                <Image 
-                  style={styles.backdrop}
-                  source={require('./public/pc.jpg')} style={{width: 360, height: 110}}>
-                    <View style={styles.backdropView}>
-                      <Text style={styles.headline}>PDRIVE</Text>
-                    </View>
-                </Image>
-
-                <ListView
-                  dataSource={this.state.dataSource}
-                  renderRow={ (rowData) => 
-                    <Text> {rowData.firstName}, {rowData.age} </Text>
-                    }/>
-
-            </View>
-
-            <View style={styles.container}>
-                <Image 
-                  style={styles.backdrop}
-                  source={require('./public/pc.jpg')} style={{width: 360, height: 110}}>
-                    <View style={styles.backdropView}>
-                      <Text style={styles.headline}>OLT</Text>
-                    </View>
-                </Image>
-
-                <ListView
-                  dataSource={this.state.dataSource}
-                  renderRow={ (rowData) => 
-                    <Text> {rowData.firstName}, {rowData.age} </Text>
-                    }/>
-
-            </View>
-
-            <View style={styles.container}>
-                <Image 
-                  style={styles.backdrop}
-                  source={require('./public/pc.jpg')} style={{width: 360, height: 110}}>
-                    <View style={styles.backdropView}>
-                      <Text style={styles.headline}>PBA</Text>
-                    </View>
-                </Image>
-
-                <ListView
-                  dataSource={this.state.dataSource}
-                  renderRow={ (rowData) => 
-                    <Text> {rowData.firstName}, {rowData.age} </Text>
-                    }/>
-
-            </View>
-
-            <View style={styles.container}>
-                <Image 
-                  style={styles.backdrop}
-                  source={require('./public/pc.jpg')} style={{width: 360, height: 110}}>
-                    <View style={styles.backdropView}>
-                      <Text style={styles.headline}>LCM</Text>
-                    </View>
-                </Image>
-
-                <ListView
-                  dataSource={this.state.dataSource}
-                  renderRow={ (rowData) => 
-                    <Text> {rowData.firstName}, {rowData.age} </Text>
-                    }/>
-
-            </View>
-
-            <View style={styles.container}>
-                <Image 
-                  style={styles.backdrop}
-                  source={require('./public/pc.jpg')} style={{width: 360, height: 110}}>
-                    <View style={styles.backdropView}>
-                      <Text style={styles.headline}>SEED</Text>
-                    </View>
-                </Image>
-
-                <ListView
-                  dataSource={this.state.dataSource}
-                  renderRow={ (rowData) => 
-                    <Text> {rowData.firstName}, {rowData.age} </Text>
-                    }/>
-
-            </View>
-
-            <View style={styles.container}>
-                <Image 
-                  style={styles.backdrop}
-                  source={require('./public/pc.jpg')} style={{width: 360, height: 110}}>
-                    <View style={styles.backdropView}>
-                      <Text style={styles.headline}>FGA</Text>
-                    </View>
-                </Image>
-
-                <ListView
-                  dataSource={this.state.dataSource}
-                  renderRow={ (rowData) => 
-                    <Text> {rowData.firstName}, {rowData.age} </Text>
-                    }/>
-
-            </View>
-
-            <View style={styles.container}>
-                <Image 
-                  style={styles.backdrop}
-                  source={require('./public/pc.jpg')} style={{width: 360, height: 110}}>
-                    <View style={styles.backdropView}>
-                      <Text style={styles.headline}>PLM</Text>
-                    </View>
-                </Image>
-
-                <ListView
-                  dataSource={this.state.dataSource}
-                  renderRow={ (rowData) => 
-                    <Text> {rowData.firstName}, {rowData.age} </Text>
-                    }/>
-
-            </View>
-
-            <View style={styles.container}>
-                <Image 
-                  style={styles.backdrop}
-                  source={require('./public/pc.jpg')} style={{width: 360, height: 110}}>
-                    <View style={styles.backdropView}>
-                      <Text style={styles.headline}>EDGECOAT</Text>
-                    </View>
-                </Image>
-
-                <ListView
-                  dataSource={this.state.dataSource}
-                  renderRow={ (rowData) => 
-                    <Text> {rowData.firstName}, {rowData.age} </Text>
-                    }/>
-
-            </View>
-
-            <View style={styles.container}>
-                <Image 
-                  style={styles.backdrop}
-                  source={require('./public/pc.jpg')} style={{width: 360, height: 110}}>
-                    <View style={styles.backdropView}>
-                      <Text style={styles.headline}>PLATING</Text>
-                    </View>
-                </Image>
-
-                <ListView
-                  dataSource={this.state.dataSource}
-                  renderRow={ (rowData) => 
-                    <Text> {rowData.firstName}, {rowData.age} </Text>
-                    }/>
-
-            </View>
-
-            <View style={styles.container}>
-                <Image 
-                  style={styles.backdrop}
-                  source={require('./public/pc.jpg')} style={{width: 360, height: 110}}>
-                    <View style={styles.backdropView}>
-                      <Text style={styles.headline}>ETCHBACK</Text>
-                    </View>
-                </Image>
-
-                <ListView
-                  dataSource={this.state.dataSource}
-                  renderRow={ (rowData) => 
-                    <Text> {rowData.firstName}, {rowData.age} </Text>
-                    }/>
-
-            </View>
-
-            <View style={styles.container}>
-                <Image 
-                  style={styles.backdrop}
-                  source={require('./public/pc.jpg')} style={{width: 360, height: 110}}>
-                    <View style={styles.backdropView}>
-                      <Text style={styles.headline}>HST</Text>
-                    </View>
-                </Image>
-
-                <ListView
-                  dataSource={this.state.dataSource}
-                  renderRow={ (rowData) => 
-                    <Text> {rowData.firstName}, {rowData.age} </Text>
-                    }/>
-
-            </View>
-
-            <View style={styles.container}>
-                <Image 
-                  style={styles.backdrop}
-                  source={require('./public/pc.jpg')} style={{width: 360, height: 110}}>
-                    <View style={styles.backdropView}>
-                      <Text style={styles.headline}>TEST</Text>
-                    </View>
-                </Image>
-
-                <ListView
-                  dataSource={this.state.dataSource}
-                  renderRow={ (rowData) => 
-                    <Text> {rowData.firstName}, {rowData.age} </Text>
-                    }/>
-
-            </View>
-          
           </IndicatorViewPager>
 
         </View>
-
+        </ScrollView>
+              
         );
     }
       
     _renderDotIndicator() {
-        return <PagerDotIndicator pageCount={21} />;
+        return <PagerDotIndicator pageCount={2} />;
     }
     
 
@@ -434,15 +172,108 @@ export default class GreetingsTo extends React.Component {
  
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#eee',
     alignItems: 'center',
     justifyContent: 'flex-start',
+    marginBottom: 30,
   },
 
-  toolbar: {
-    backgroundColor: '#2E8B57',
-    height: 56
+  targetContainer: {
+    backgroundColor: '#fff',
+    padding: 5,
+    marginTop: 15,
+    width: 360,
+    height: 120,
+    marginBottom: 15,
+
+  },
+
+  outsContainer: {
+    backgroundColor: '#fff',
+    padding: 5,
+    width: 360,
+    height: 120,
+    marginBottom: 15,
+  },
+
+  varContainer: {
+    backgroundColor: '#fff',
+    padding: 5,
+    width: 360,
+    height: 120,
+    marginBottom: 15,
+  },
+
+  targetText: {
+    fontSize: 20,
+    textAlign: 'left',
+    padding: 5,
+    fontWeight: "500",
+    borderBottomColor: '#e2e2e2',
+    borderBottomWidth: 0.2,
+  },
+
+  outsText: {
+    fontSize: 20,
+    textAlign: 'left',
+    padding: 5,
+    fontWeight: "500",
+    borderBottomColor: '#e2e2e2',
+    borderBottomWidth: 0.2,
+  },
+
+  varText: {
+    fontSize: 20,
+    textAlign: 'left',
+    padding: 5,
+    fontWeight: "500",
+    borderBottomColor: '#e2e2e2',
+    borderBottomWidth: 0.2,
+  },
+
+  targetValue: {
+    fontSize: 24,
+    textAlign: 'left',
+    padding: 5,
+    fontWeight: "700",
+    borderBottomColor: '#e2e2e2',
+    borderBottomWidth: 0.2,
+  },
+
+  outsValue: {
+    fontSize: 24,
+    textAlign: 'left',
+    padding: 5,
+    fontWeight: "700",
+    borderBottomColor: '#e2e2e2',
+    borderBottomWidth: 0.2,
+  },
+
+  varValue: {
+    fontSize: 24,
+    textAlign: 'left',
+    padding: 5,
+    fontWeight: "700",
+    borderBottomColor: '#e2e2e2',
+    borderBottomWidth: 0.2,
+  },
+
+  targetTime: {
+    fontSize: 14,
+    textAlign: 'left',
+    padding: 5,
+  },
+
+  outsTime: {
+    fontSize: 14,
+    textAlign: 'left',
+    padding: 5,
+  },
+
+  varTime: {
+    fontSize: 14,
+    textAlign: 'left',
+    padding: 5,
   },
 
   buttonContainer: {
